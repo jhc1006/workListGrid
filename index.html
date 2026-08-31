@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSquare GridView 동적 멀티라인 CheckComboBox (Static Demo)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --cell-hover: #f1f5f9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            padding: 32px;
+            border: 1px solid var(--border-color);
+        }
+
+        .header {
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 20px;
+            background-color: #dbeafe;
+            color: var(--primary-color);
+        }
+
+        /* Grid Table Styles */
+        .grid-table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        table.grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        table.grid-table th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 600;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        table.grid-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+            background-color: #fff;
+            transition: background 0.15s ease;
+        }
+
+        table.grid-table tr:hover td {
+            background-color: var(--cell-hover);
+        }
+
+        table.grid-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .col-no { width: 60px; text-align: center; }
+        .col-type { width: 220px; }
+        .col-target { width: auto; }
+
+        /* Custom Select */
+        select.form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            font-family: inherit;
+            color: var(--text-main);
+            background-color: #fff;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        select.form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        /* Custom CheckComboBox UI */
+        .checkcombobox-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .checkcombobox-display {
+            min-height: 42px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: #fff;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .checkcombobox-display:hover {
+            border-color: #cbd5e1;
+        }
+
+        .checkcombobox-container.active .checkcombobox-display {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .multiline-text {
+            white-space: pre-wrap;
+            line-height: 1.5;
+            font-size: 0.875rem;
+            color: var(--text-main);
+            word-break: break-all;
+        }
+
+        .multiline-text.placeholder {
+            color: #94a3b8;
+        }
+
+        .dropdown-icon {
+            margin-left: 8px;
+            margin-top: 2px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .checkcombobox-container.active .dropdown-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Dropdown Menu */
+        .checkcombobox-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            width: 100%;
+            max-height: 240px;
+            overflow-y: auto;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+            padding: 6px;
+        }
+
+        .checkcombobox-container.active .checkcombobox-dropdown {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            user-select: none;
+            font-size: 0.85rem;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .dropdown-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .dropdown-item.checked {
+            background-color: #eff6ff;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Action Buttons & Status */
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        /* Output Result Box */
+        .result-box {
+            margin-top: 24px;
+            background: #0f172a;
+            color: #38bdf8;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>
+            WebSquare GridView Static Demo 
+            <span class="badge">Static HTML/JS</span>
+        </h1>
+        <p>동적 멀티라인 CheckComboBox & 체크 항목 최상단 자동 정렬 시뮬레이션</p>
+    </div>
+
+    <div class="grid-table-container">
+        <table class="grid-table">
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-type">작업구분 (workType)</th>
+                    <th class="col-target">작업대상 (workTarget - CheckComboBox)</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <!-- Javascript Dynamic Rendering -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-secondary" onclick="addRow()">+ 행 추가</button>
+        <button class="btn btn-primary" onclick="printData()">현재 그리드 JSON 데이터 출력</button>
+    </div>
+
+    <div class="result-box" id="resultBox">// 버튼을 누르면 JSON 데이터가 여기에 출력됩니다.</div>
+</div>
+
+<script>
+    /**
+     * 상위 구분별 코드 마스터 데이터
+     */
+    const targetCodeMaster = {
+        "EQ": [
+            { id: "EQ_A01", name: "압출 성형기 1호" },
+            { id: "EQ_B01", name: "고속 정밀 냉각기" },
+            { id: "EQ_C01", name: "자동 포장기 3호" },
+            { id: "EQ_D01", name: "원료 배합기 2호" }
+        ],
+        "MAT": [
+            { id: "IN_NORMAL", name: "정상입고" },
+            { id: "IN_URGENT", name: "긴급입고" },
+            { id: "OUT_NORMAL", name: "정상출고" },
+            { id: "OUT_DISCARD", name: "폐기출고" }
+        ]
+    };
+
+    /**
+     * 그리드 데이터 (DataList 역할)
+     */
+    let gridData = [
+        { workType: "EQ", workTarget: "EQ_A01,EQ_C01" },
+        { workType: "MAT", workTarget: "IN_NORMAL" },
+        { workType: "EQ", workTarget: "EQ_B01" }
+    ];
+
+    // 페이지 초기화
+    document.addEventListener("DOMContentLoaded", () => {
+        renderGrid();
+
+        // 바깥 클릭 시 모든 CheckComboBox 드롭다운 닫기
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".checkcombobox-container")) {
+                document.querySelectorAll(".checkcombobox-container").forEach(el => {
+                    el.classList.remove("active");
+                });
+            }
+        });
+    });
+
+    /**
+     * 전체 그리드 렌더링
+     */
+    function renderGrid() {
+        const tbody = document.getElementById("gridBody");
+        tbody.innerHTML = "";
+
+        gridData.forEach((row, index) => {
+            const tr = document.createElement("tr");
+
+            // No
+            const tdNo = document.createElement("td");
+            tdNo.className = "col-no";
+            tdNo.innerText = index + 1;
+
+            // 작업구분 셀
+            const tdType = document.createElement("td");
+            tdType.className = "col-type";
+            tdType.appendChild(createTypeSelect(index, row.workType));
+
+            // 작업대상 셀 (Custom CheckComboBox)
+            const tdTarget = document.createElement("td");
+            tdTarget.className = "col-target";
+            tdTarget.appendChild(createCheckComboBox(index, row.workType, row.workTarget));
+
+            tr.appendChild(tdNo);
+            tr.appendChild(tdType);
+            tr.appendChild(tdTarget);
+            tbody.appendChild(tr);
+        });
+    }
+
+    /**
+     * 작업구분 `<select>` 생성
+     */
+    function createTypeSelect(rowIndex, selectedType) {
+        const select = document.createElement("select");
+        select.className = "form-control";
+        
+        const defaultOpt = document.createElement("option");
+        defaultOpt.value = "";
+        defaultOpt.innerText = "- 선택 -";
+        select.appendChild(defaultOpt);
+
+        const types = [
+            { code: "EQ", name: "설비" },
+            { code: "MAT", name: "자재입출고" }
+        ];
+
+        types.forEach(type => {
+            const opt = document.createElement("option");
+            opt.value = type.code;
+            opt.innerText = type.name;
+            if (type.code === selectedType) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        select.addEventListener("change", (e) => {
+            gridData[rowIndex].workType = e.target.value;
+            gridData[rowIndex].workTarget = ""; // 구분 변경 시 대상 초기화
+            renderGrid();
+        });
+
+        return select;
+    }
+
+    /**
+     * Custom CheckComboBox 생성 (체크 항목 최상단 정렬 및 멀티라인 구현)
+     */
+    function createCheckComboBox(rowIndex, workType, workTargetStr) {
+        const container = document.createElement("div");
+        container.className = "checkcombobox-container";
+
+        const masterList = targetCodeMaster[workType] || [];
+        const selectedArr = workTargetStr ? workTargetStr.split(",").map(s => s.trim()) : [];
+        const selectedSet = new Set(selectedArr);
+
+        // 1. 체크 항목 최상단 정렬
+        const sortedMaster = masterList.slice().sort((a, b) => {
+            const aChecked = selectedSet.has(a.id) ? 1 : 0;
+            const bChecked = selectedSet.has(b.id) ? 1 : 0;
+            return bChecked - aChecked;
+        });
+
+        // 2. Display 셀 (포커스 아웃 / 읽기 모드 멀티라인 렌더링)
+        const display = document.createElement("div");
+        display.className = "checkcombobox-display";
+
+        const textSpan = document.createElement("span");
+        textSpan.className = "multiline-text";
+
+        if (selectedArr.length > 0 && workType) {
+            const displayTexts = selectedArr.map(val => {
+                const item = masterList.find(m => m.id === val);
+                return item ? `${item.id} (${item.name})` : val;
+            });
+            textSpan.innerText = displayTexts.join("\n");
+        } else {
+            textSpan.innerText = workType ? "- 작업대상 선택 -" : "- 작업구분을 먼저 선택하세요 -";
+            textSpan.classList.add("placeholder");
+        }
+
+        const icon = document.createElement("span");
+        icon.className = "dropdown-icon";
+        icon.innerText = "▼";
+
+        display.appendChild(textSpan);
+        display.appendChild(icon);
+
+        // 3. Dropdown Menu (체크박스 목록)
+        const dropdown = document.createElement("div");
+        dropdown.className = "checkcombobox-dropdown";
+
+        if (!workType || masterList.length === 0) {
+            const emptyNotice = document.createElement("div");
+            emptyNotice.style.padding = "8px";
+            emptyNotice.style.fontSize = "0.8rem";
+            emptyNotice.style.color = "#94a3b8";
+            emptyNotice.innerText = "선택 가능한 항목이 없습니다.";
+            dropdown.appendChild(emptyNotice);
+        } else {
+            sortedMaster.forEach(item => {
+                const isChecked = selectedSet.has(item.id);
+
+                const itemDiv = document.createElement("label");
+                itemDiv.className = `dropdown-item ${isChecked ? "checked" : ""}`;
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.value = item.id;
+                checkbox.checked = isChecked;
+
+                const labelText = document.createTextNode(`${item.id} (${item.name})`);
+
+                checkbox.addEventListener("change", (e) => {
+                    e.stopPropagation();
+                    if (checkbox.checked) {
+                        selectedSet.add(item.id);
+                    } else {
+                        selectedSet.delete(item.id);
+                    }
+
+                    // 콤마 구분자 문자열 생성 및 모델 갱신
+                    const newTargetStr = Array.from(selectedSet).join(",");
+                    gridData[rowIndex].workTarget = newTargetStr;
+
+                    // 상태 재정렬 렌더링
+                    renderGrid();
+                    // 드롭다운 열림 상태 유지
+                    setTimeout(() => {
+                        const newContainer = document.querySelectorAll(".checkcombobox-container")[rowIndex];
+                        if (newContainer) newContainer.classList.add("active");
+                    }, 0);
+                });
+
+                itemDiv.appendChild(checkbox);
+                itemDiv.appendChild(labelText);
+                dropdown.appendChild(itemDiv);
+            });
+        }
+
+        // 토글 동작
+        display.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isActive = container.classList.contains("active");
+            document.querySelectorAll(".checkcombobox-container").forEach(el => el.classList.remove("active"));
+            if (!isActive && workType) {
+                container.classList.add("active");
+            }
+        });
+
+        container.appendChild(display);
+        container.appendChild(dropdown);
+
+        return container;
+    }
+
+    /**
+     * 행 추가
+     */
+    function addRow() {
+        gridData.push({ workType: "", workTarget: "" });
+        renderGrid();
+    }
+
+    /**
+     * JSON 데이터 출력
+     */
+    function printData() {
+        const resultBox = document.getElementById("resultBox");
+        resultBox.innerText = "// 현재 그리드 데이터 (dlt_grid.getJSON() 연동 대상)\n" + JSON.stringify(gridData, null, 2);
+    }
+</script>
+
+</body>
+</html>
