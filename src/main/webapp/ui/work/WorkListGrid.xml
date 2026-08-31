@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:ev="http://www.w3.org/2001/xml-events"
+    xmlns:w2="http://www.inswave.com/websquare"
+    xmlns:xf="http://www.w3.org/2002/xforms">
+    <head>
+        <w2:type>COMPONENT</w2:type>
+        <w2:buildDate/>
+        <xf:model>
+            <w2:dataCollection baseNode="map">
+                <!-- 그리드 메인 DataList -->
+                <w2:dataList id="dlt_grid" baseNode="list" repeatNode="map" saveRemovedData="true">
+                    <w2:columnInfo>
+                        <w2:column id="workType" name="작업구분" dataType="text"></w2:column>
+                        <w2:column id="workTarget" name="작업대상" dataType="text"></w2:column>
+                    </w2:columnInfo>
+                </w2:dataList>
+
+                <!-- 작업구분 공통코드 DataList -->
+                <w2:dataList id="dlt_workType" baseNode="list" repeatNode="map">
+                    <w2:columnInfo>
+                        <w2:column id="code" name="코드" dataType="text"></w2:column>
+                        <w2:column id="name" name="명칭" dataType="text"></w2:column>
+                    </w2:columnInfo>
+                    <w2:data xmlns="">
+                        <w2:row>
+                            <code>EQ</code>
+                            <name>설비</name>
+                        </w2:row>
+                        <w2:row>
+                            <code>MAT</code>
+                            <name>자재입출고</name>
+                        </w2:row>
+                    </w2:data>
+                </w2:dataList>
+            </w2:dataCollection>
+
+            <!-- 서버 조회 Submission -->
+            <xf:submission id="sbm_search" ref="" target="data:json,dlt_grid" action="/api/work/list" method="post" mediatype="application/json"
+                encoding="UTF-8" instance="" replace="" errorHandler="" customHandler="" mode="asynchronous" processMsg="" ev:submitdone="scwin.sbm_search_submitdone">
+            </xf:submission>
+        </xf:model>
+
+        <style type="text/css"><![CDATA[
+            /* 그리드 멀티라인 셀 스타일 */
+            .multiline_cell {
+                white-space: pre-wrap !important;
+                line-height: 1.4 !important;
+                padding: 6px 4px !important;
+            }
+        ]]></style>
+
+        <script type="javascript" lazy="false"><![CDATA[
+            /**
+             * 상위 작업구분별 작업대상 마스터 코드 데이터
+             */
+            scwin.targetCodeMaster = {
+                "EQ": [
+                    { id: "EQ_A01", name: "압출 성형기 1호" },
+                    { id: "EQ_B01", name: "고속 정밀 냉각기" },
+                    { id: "EQ_C01", name: "자동 포장기 3호" },
+                    { id: "EQ_D01", name: "원료 배합기 2호" }
+                ],
+                "MAT": [
+                    { id: "IN_NORMAL", name: "정상입고" },
+                    { id: "IN_URGENT", name: "긴급입고" },
+                    { id: "OUT_NORMAL", name: "정상출고" },
+                    { id: "OUT_DISCARD", name: "폐기출고" }
+                ]
+            };
+
+            scwin.onpageload = function() {
+                // 테스트용 초기 샘플 데이터 세팅
+                var sampleData = [
+                    { "workType": "EQ", "workTarget": "EQ_A01,EQ_C01" },
+                    { "workType": "MAT", "workTarget": "IN_NORMAL" },
+                    { "workType": "EQ", "workTarget": "EQ_B01" }
+                ];
+                dlt_grid.setJSON(sampleData);
+                scwin.fn_initGridRender();
+            };
+
+            /**
+             * 그리드 데이터 로드 후 각 행별 checkcombobox 셀 아이템 목록 동적 초기화
+             */
+            scwin.fn_initGridRender = function() {
+                var rowCount = dlt_grid.getRowCount();
+                for (var i = 0; i < rowCount; i++) {
+                    var workType = dlt_grid.getCellData(i, "workType");
+                    var workTarget = dlt_grid.getCellData(i, "workTarget");
+                    scwin.refreshTargetItemList(i, workType, workTarget);
+                }
+            };
+
+            /**
+             * 그리드 셀 변경 이벤트 (onviewchange)
+             */
+            scwin.grd_workList_onviewchange = function(info) {
+                var rowIndex = info.rowIndex;
+                var colId = info.colID;
+                var newValue = info.newValue;
+
+                // 1. 작업구분 변경 시 -> 작업대상 초기화 및 드롭다운 목록 재구성
+                if (colId === "workType") {
+                    var targetColIndex = grd_workList.getColumnIndex("workTarget");
+                    grd_workList.setCellData(rowIndex, targetColIndex, "");
+                    scwin.refreshTargetItemList(rowIndex, newValue, "");
+                }
+
+                // 2. 작업대상 선택 변경 시 -> 체크된 항목 최상단 재정렬
+                if (colId === "workTarget") {
+                    var currentWorkType = dlt_grid.getCellData(rowIndex, "workType");
+                    scwin.refreshTargetItemList(rowIndex, currentWorkType, newValue);
+                }
+            };
+
+            /**
+             * 선택/체크된 항목을 상단으로 정렬하여 setCellItemList 적용
+             */
+            scwin.refreshTargetItemList = function(rowIndex, workType, selectedValuesStr) {
+                var targetColIndex = grd_workList.getColumnIndex("workTarget");
+                var masterList = scwin.targetCodeMaster[workType] || [];
+
+                if (masterList.length === 0) {
+                    grd_workList.setCellItemList(rowIndex, targetColIndex, []);
+                    return;
+                }
+
+                var selectedArr = selectedValuesStr ? selectedValuesStr.split(",") : [];
+                var selectedSet = {};
+                for (var i = 0; i < selectedArr.length; i++) {
+                    var trimmed = selectedArr[i].trim();
+                    if (trimmed) {
+                        selectedSet[trimmed] = true;
+                    }
+                }
+
+                // 체크된 항목 우선 정렬 (Checked 항목 -> Unchecked 항목)
+                var sortedList = masterList.slice().sort(function(a, b) {
+                    var aChecked = selectedSet[a.id] ? 1 : 0;
+                    var bChecked = selectedSet[b.id] ? 1 : 0;
+                    return bChecked - aChecked;
+                });
+
+                // WebSquare setCellItemList용 배열 구조 생성 [{ label, value }]
+                var itemList = [];
+                for (var j = 0; j < sortedList.length; j++) {
+                    var item = sortedList[j];
+                    itemList.push({
+                        label: item.id + " (" + item.name + ")",
+                        value: item.id
+                    });
+                }
+
+                grd_workList.setCellItemList(rowIndex, targetColIndex, itemList);
+            };
+
+            /**
+             * 작업대상 셀 커스텀 포맷터 (읽기 모드 포커스 아웃 시 멀티라인 출력)
+             */
+            scwin.fn_workTargetFormatter = function(value, formattedValue, rowIndex, colIndex) {
+                if (!value) return "";
+                var workType = dlt_grid.getCellData(rowIndex, "workType");
+                var masterList = scwin.targetCodeMaster[workType] || [];
+                var masterMap = {};
+                for (var i = 0; i < masterList.length; i++) {
+                    masterMap[masterList[i].id] = masterList[i].name;
+                }
+
+                var valArr = value.split(",");
+                var resultArr = [];
+                for (var j = 0; j < valArr.length; j++) {
+                    var val = valArr[j].trim();
+                    if (val) {
+                        var name = masterMap[val] || val;
+                        resultArr.push(val + " (" + name + ")");
+                    }
+                }
+
+                // 줄바꿈 문자(\n)로 구분하여 반환
+                return resultArr.join("\n");
+            };
+
+            /**
+             * 조회 완료 콜백 (초기/조회 후 그리드 바인딩 복원)
+             */
+            scwin.sbm_search_submitdone = function(e) {
+                scwin.fn_initGridRender();
+            };
+        ]]></script>
+    </head>
+    <body>
+        <w2:gridView id="grd_workList" dataList="data:dlt_grid" style="width: 100%; height: 400px;"
+            rowNumVisible="true" rowNumHeaderValue="No" autoFit="allColumn"
+            ev:onviewchange="scwin.grd_workList_onviewchange">
+            <w2:header id="header1" style="">
+                <w2:row id="row1" style="">
+                    <w2:column id="h_workType" blockSelect="false" width="150" inputType="text" value="작업구분"></w2:column>
+                    <w2:column id="h_workTarget" blockSelect="false" width="350" inputType="text" value="작업대상"></w2:column>
+                </w2:row>
+            </w2:header>
+            <w2:gBody id="gBody1" style="">
+                <w2:row id="row2" style="">
+                    <w2:column id="workType" blockSelect="false" width="150" inputType="select" chooseOption="true" chooseOptionLabel="- 선택 -">
+                        <w2:choices>
+                            <w2:itemset nodeset="data:dlt_workType">
+                                <w2:label ref="name"></w2:label>
+                                <w2:value ref="code"></w2:value>
+                            </w2:itemset>
+                        </w2:choices>
+                    </w2:column>
+                    <w2:column id="workTarget" blockSelect="false" width="350" inputType="checkcombobox"
+                        customFormatter="scwin.fn_workTargetFormatter" class="multiline_cell">
+                        <w2:choices></w2:choices>
+                    </w2:column>
+                </w2:row>
+            </w2:gBody>
+        </w2:gridView>
+    </body>
+</html>
