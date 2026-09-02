@@ -112,8 +112,28 @@
         }
 
         .col-no { width: 60px; text-align: center; }
-        .col-type { width: 220px; }
+        .col-type { width: 180px; }
         .col-target { width: auto; }
+        .col-time { width: 140px; }
+
+        input.time-input {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            font-family: inherit;
+            color: var(--text-main);
+            background-color: #fff;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input.time-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
 
         /* Custom Select */
         select.form-control {
@@ -306,6 +326,8 @@
                     <th class="col-no">No</th>
                     <th class="col-type">작업구분 (workType)</th>
                     <th class="col-target">작업대상 (workTarget - CheckComboBox)</th>
+                    <th class="col-time">시작시간 (startTime)</th>
+                    <th class="col-time">종료시간 (endTime)</th>
                 </tr>
             </thead>
             <tbody id="gridBody">
@@ -345,9 +367,9 @@
      * 그리드 데이터 (DataList 역할)
      */
     let gridData = [
-        { workType: "EQ", workTarget: "EQ_A01,EQ_C01" },
-        { workType: "MAT", workTarget: "IN_NORMAL" },
-        { workType: "EQ", workTarget: "EQ_B01" }
+        { workType: "EQ", workTarget: "EQ_A01,EQ_C01", startTime: "09:00", endTime: "12:00" },
+        { workType: "MAT", workTarget: "IN_NORMAL", startTime: "13:00", endTime: "17:30" },
+        { workType: "EQ", workTarget: "EQ_B01", startTime: "08:30", endTime: "18:00" }
     ];
 
     // 페이지 초기화
@@ -389,9 +411,21 @@
             tdTarget.className = "col-target";
             tdTarget.appendChild(createCheckComboBox(index, row.workType, row.workTarget));
 
+            // 시작시간 셀
+            const tdStartTime = document.createElement("td");
+            tdStartTime.className = "col-time";
+            tdStartTime.appendChild(createTimeInput(index, "startTime", row.startTime));
+
+            // 종료시간 셀
+            const tdEndTime = document.createElement("td");
+            tdEndTime.className = "col-time";
+            tdEndTime.appendChild(createTimeInput(index, "endTime", row.endTime));
+
             tr.appendChild(tdNo);
             tr.appendChild(tdType);
             tr.appendChild(tdTarget);
+            tr.appendChild(tdStartTime);
+            tr.appendChild(tdEndTime);
             tbody.appendChild(tr);
         });
     }
@@ -542,10 +576,24 @@
     }
 
     /**
+     * 시간 (시:분) 입력 input 생성
+     */
+    function createTimeInput(rowIndex, field, value) {
+        const input = document.createElement("input");
+        input.type = "time";
+        input.className = "form-control time-input";
+        input.value = value || "";
+        input.addEventListener("change", (e) => {
+            gridData[rowIndex][field] = e.target.value;
+        });
+        return input;
+    }
+
+    /**
      * 행 추가
      */
     function addRow() {
-        gridData.push({ workType: "", workTarget: "" });
+        gridData.push({ workType: "", workTarget: "", startTime: "", endTime: "" });
         renderGrid();
     }
 

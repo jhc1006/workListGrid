@@ -13,6 +13,8 @@
                     <w2:columnInfo>
                         <w2:column id="workType" name="작업구분" dataType="text"></w2:column>
                         <w2:column id="workTarget" name="작업대상" dataType="text"></w2:column>
+                        <w2:column id="startTime" name="시작시간" dataType="text"></w2:column>
+                        <w2:column id="endTime" name="종료시간" dataType="text"></w2:column>
                     </w2:columnInfo>
                 </w2:dataList>
 
@@ -72,9 +74,9 @@
             scwin.onpageload = function() {
                 // 테스트용 초기 샘플 데이터 세팅
                 var sampleData = [
-                    { "workType": "EQ", "workTarget": "EQ_A01,EQ_C01" },
-                    { "workType": "MAT", "workTarget": "IN_NORMAL" },
-                    { "workType": "EQ", "workTarget": "EQ_B01" }
+                    { "workType": "EQ", "workTarget": "EQ_A01,EQ_C01", "startTime": "09:00", "endTime": "12:00" },
+                    { "workType": "MAT", "workTarget": "IN_NORMAL", "startTime": "13:00", "endTime": "17:30" },
+                    { "workType": "EQ", "workTarget": "EQ_B01", "startTime": "08:30", "endTime": "18:00" }
                 ];
                 dlt_grid.setJSON(sampleData);
                 scwin.fn_initGridRender();
@@ -197,6 +199,8 @@
                 <w2:row id="row1" style="">
                     <w2:column id="h_workType" blockSelect="false" width="150" inputType="text" value="작업구분"></w2:column>
                     <w2:column id="h_workTarget" blockSelect="false" width="350" inputType="text" value="작업대상"></w2:column>
+                    <w2:column id="h_startTime" blockSelect="false" width="120" inputType="text" value="시작시간"></w2:column>
+                    <w2:column id="h_endTime" blockSelect="false" width="120" inputType="text" value="종료시간"></w2:column>
                 </w2:row>
             </w2:header>
             <w2:gBody id="gBody1" style="">
@@ -213,6 +217,8 @@
                         customFormatter="scwin.fn_workTargetFormatter" class="multiline_cell">
                         <w2:choices></w2:choices>
                     </w2:column>
+                    <w2:column id="startTime" blockSelect="false" width="120" inputType="text" displayFormat="HH:mm" ioFormat="HHmm" placeholder="HH:mm"></w2:column>
+                    <w2:column id="endTime" blockSelect="false" width="120" inputType="text" displayFormat="HH:mm" ioFormat="HHmm" placeholder="HH:mm"></w2:column>
                 </w2:row>
             </w2:gBody>
         </w2:gridView>
