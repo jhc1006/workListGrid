@@ -33,6 +33,10 @@
                             <code>MAT</code>
                             <name>자재입출고</name>
                         </w2:row>
+                        <w2:row>
+                            <code>ETC</code>
+                            <name>기타(직접입력)</name>
+                        </w2:row>
                     </w2:data>
                 </w2:dataList>
             </w2:dataCollection>
@@ -165,6 +169,7 @@
                 "2026-09-07": [
                     { "workType": "EQ", "workTarget": "EQ_A01,EQ_D01", "startTime": "08:00", "endTime": "11:30", "remark": "압출 1호기 점검 및 원료 배합" },
                     { "workType": "MAT", "workTarget": "IN_URGENT", "startTime": "11:30", "endTime": "13:00", "remark": "원자재 긴급 입고" },
+                    { "workType": "ETC", "workTarget": "안전 교육 및 라인 청소", "startTime": "13:00", "endTime": "14:00", "remark": "주간 정기 청소" },
                     { "workType": "EQ", "workTarget": "EQ_C01", "startTime": "14:00", "endTime": "17:00", "remark": "자동 포장기 3호 라인 교체" }
                 ],
                 "2026-09-06": [
@@ -178,7 +183,7 @@
                 var sampleData = [
                     { "workType": "EQ", "workTarget": "EQ_A01,EQ_C01", "startTime": "09:00", "endTime": "12:00" },
                     { "workType": "MAT", "workTarget": "IN_NORMAL", "startTime": "13:00", "endTime": "17:30" },
-                    { "workType": "EQ", "workTarget": "EQ_B01", "startTime": "08:30", "endTime": "18:00" }
+                    { "workType": "ETC", "workTarget": "라인 정기 점검 및 안전 수칙 확인", "startTime": "17:30", "endTime": "18:00" }
                 ];
                 dlt_grid.setJSON(sampleData);
                 scwin.fn_initGridRender();
@@ -219,8 +224,10 @@
 
                         var targetColFormatted = scwin.fn_formatTargetText(item.workType, item.workTarget);
 
+                        var workTypeLabel = item.workType === 'EQ' ? '설비(EQ)' : (item.workType === 'MAT' ? '자재(MAT)' : '기타(ETC)');
+
                         tr.innerHTML = '<td><input type="checkbox" class="import-chk" data-index="' + i + '" checked /></td>'
-                            + '<td>' + (item.workType === 'EQ' ? '설비(EQ)' : '자재(MAT)') + '</td>'
+                            + '<td>' + workTypeLabel + '</td>'
                             + '<td><div style="white-space:pre-wrap;">' + targetColFormatted + '</div></td>'
                             + '<td>' + item.startTime + ' ~ ' + item.endTime + '</td>'
                             + '<td>' + (item.remark || '-') + '</td>';
@@ -237,6 +244,8 @@
              */
             scwin.fn_formatTargetText = function(workType, workTargetStr) {
                 if (!workTargetStr) return "";
+                if (workType !== "EQ" && workType !== "MAT") return workTargetStr;
+
                 var masterList = (scwin.targetCodeMaster || []).filter(function(item) {
                     return item.workType === workType;
                 });
@@ -328,10 +337,20 @@
             };
 
             /**
-             * 선택/체크된 항목을 상단으로 정렬하여 setCellItemList 적용
+             * 선택/체크된 항목을 상단으로 정렬하여 setCellItemList 적용 (EQ/MAT가 아닌 경우 text 모드)
              */
             scwin.refreshTargetItemList = function(rowIndex, workType, selectedValuesStr) {
                 var targetColIndex = grd_workList.getColumnIndex("workTarget");
+
+                // EQ, MAT가 아닌 경우 -> 일반 text 입력 모드로 전환
+                if (workType !== "EQ" && workType !== "MAT") {
+                    grd_workList.setCellInputType(rowIndex, targetColIndex, "text");
+                    return;
+                }
+
+                // EQ, MAT인 경우 -> checkcombobox 입력 모드로 전환
+                grd_workList.setCellInputType(rowIndex, targetColIndex, "checkcombobox");
+
                 var masterList = (scwin.targetCodeMaster || []).filter(function(item) {
                     return item.workType === workType;
                 });
@@ -376,6 +395,12 @@
             scwin.fn_workTargetFormatter = function(value, formattedValue, rowIndex, colIndex) {
                 if (!value) return "";
                 var workType = dlt_grid.getCellData(rowIndex, "workType");
+
+                // EQ, MAT가 아닌 경우 -> 입력값 그대로 표시
+                if (workType !== "EQ" && workType !== "MAT") {
+                    return value;
+                }
+
                 var masterList = (scwin.targetCodeMaster || []).filter(function(item) {
                     return item.workType === workType;
                 });

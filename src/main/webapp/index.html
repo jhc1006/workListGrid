@@ -732,7 +732,8 @@
 
         const types = [
             { code: "EQ", name: "설비" },
-            { code: "MAT", name: "자재입출고" }
+            { code: "MAT", name: "자재입출고" },
+            { code: "ETC", name: "기타 (직접입력)" }
         ];
 
         types.forEach(type => {
@@ -753,9 +754,24 @@
     }
 
     /**
-     * Custom CheckComboBox 생성 (검색 기능, 포커스 아웃 시 읽기 모드 전환, 체크 항목 최상단 정렬 및 멀티라인 구현)
+     * Custom CheckComboBox 생성 (EQ/MAT가 아닌 경우 일반 text input 반환)
      */
     function createCheckComboBox(rowIndex, workType, workTargetStr, currentSearchQuery = "") {
+        // EQ, MAT가 아닌 경우 -> 일반 텍스트 입력 input 반환
+        if (workType !== "EQ" && workType !== "MAT") {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "time-input";
+            input.style.width = "100%";
+            input.placeholder = workType ? "작업대상 직접 입력..." : "- 작업구분을 먼저 선택하세요 -";
+            input.value = workTargetStr || "";
+            if (!workType) input.disabled = true;
+            input.addEventListener("change", (e) => {
+                gridData[rowIndex].workTarget = e.target.value;
+            });
+            return input;
+        }
+
         const container = document.createElement("div");
         container.className = "checkcombobox-container";
 
