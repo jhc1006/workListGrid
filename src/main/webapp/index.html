@@ -511,7 +511,7 @@
     }
 
     /**
-     * Custom CheckComboBox 생성 (검색 기능, 체크 항목 최상단 정렬 및 멀티라인 구현)
+     * Custom CheckComboBox 생성 (검색 기능, 포커스 아웃 시 읽기 모드 전환, 체크 항목 최상단 정렬 및 멀티라인 구현)
      */
     function createCheckComboBox(rowIndex, workType, workTargetStr, currentSearchQuery = "") {
         const container = document.createElement("div");
@@ -531,20 +531,27 @@
         // 2. Display 셀 (포커스 아웃 / 읽기 모드 멀티라인 렌더링)
         const display = document.createElement("div");
         display.className = "checkcombobox-display";
+        display.setAttribute("tabindex", "0");
 
         const textSpan = document.createElement("span");
         textSpan.className = "multiline-text";
 
-        if (selectedArr.length > 0 && workType) {
-            const displayTexts = selectedArr.map(val => {
-                const item = masterList.find(m => m.id === val);
-                return item ? `${item.id} (${item.name})` : val;
-            });
-            textSpan.innerText = displayTexts.join("\n");
-        } else {
-            textSpan.innerText = workType ? "- 작업대상 선택 -" : "- 작업구분을 먼저 선택하세요 -";
-            textSpan.classList.add("placeholder");
-        }
+        const updateDisplayText = () => {
+            const currentArr = Array.from(selectedSet);
+            if (currentArr.length > 0 && workType) {
+                const displayTexts = currentArr.map(val => {
+                    const item = masterList.find(m => m.id === val);
+                    return item ? `${item.id} (${item.name})` : val;
+                });
+                textSpan.innerText = displayTexts.join("\n");
+                textSpan.classList.remove("placeholder");
+            } else {
+                textSpan.innerText = workType ? "- 작업대상 선택 -" : "- 작업구분을 먼저 선택하세요 -";
+                textSpan.classList.add("placeholder");
+            }
+        };
+
+        updateDisplayText();
 
         const icon = document.createElement("span");
         icon.className = "dropdown-icon";
@@ -581,7 +588,13 @@
             // 이벤트 전파 방지
             searchContainer.addEventListener("click", (e) => e.stopPropagation());
             searchInput.addEventListener("click", (e) => e.stopPropagation());
-            searchInput.addEventListener("keydown", (e) => e.stopPropagation());
+            searchInput.addEventListener("keydown", (e) => {
+                e.stopPropagation();
+                if (e.key === "Escape" || e.key === "Enter") {
+                    closeDropdown();
+                    display.focus();
+                }
+            });
 
             const itemListContainer = document.createElement("div");
             itemListContainer.className = "dropdown-item-list";
@@ -615,17 +628,18 @@
                     e.stopPropagation();
                     if (checkbox.checked) {
                         selectedSet.add(item.id);
+                        itemDiv.classList.add("checked");
                     } else {
                         selectedSet.delete(item.id);
+                        itemDiv.classList.remove("checked");
                     }
 
                     // 콤마 구분자 문자열 생성 및 모델 갱신
                     const newTargetStr = Array.from(selectedSet).join(",");
                     gridData[rowIndex].workTarget = newTargetStr;
 
-                    // 검색 필터 상태 유지하며 재정렬 렌더링
-                    const activeQuery = searchInput.value;
-                    renderGrid(rowIndex, activeQuery);
+                    // 실시간 Display 텍스트 업데이트
+                    updateDisplayText();
                 });
 
                 itemDiv.appendChild(checkbox);
@@ -680,18 +694,48 @@
             }
         }
 
+        // 드롭다운 닫기 (읽기 모드로 전환)
+        const closeDropdown = () => {
+            if (container.classList.contains("active")) {
+                container.classList.remove("active");
+                renderGrid(); // 체크 항목 최상단 정렬을 반영한 읽기 모드 전환
+            }
+        };
+
+        // 드롭다운 열기 (편집 모드로 전환)
+        const openDropdown = () => {
+            if (!workType) return;
+            document.querySelectorAll(".checkcombobox-container").forEach(el => {
+                if (el !== container) el.classList.remove("active");
+            });
+            container.classList.add("active");
+            const searchInp = container.querySelector(".dropdown-search-input");
+            if (searchInp) {
+                setTimeout(() => searchInp.focus(), 50);
+            }
+        };
+
         // 토글 동작
         display.addEventListener("click", (e) => {
             e.stopPropagation();
-            const isActive = container.classList.contains("active");
-            document.querySelectorAll(".checkcombobox-container").forEach(el => el.classList.remove("active"));
-            if (!isActive && workType) {
-                container.classList.add("active");
-                // 검색 입력창 자동 포커스
-                const searchInp = container.querySelector(".dropdown-search-input");
-                if (searchInp) {
-                    setTimeout(() => searchInp.focus(), 50);
-                }
+            if (container.classList.contains("active")) {
+                closeDropdown();
+            } else {
+                openDropdown();
+            }
+        });
+
+        display.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+                e.preventDefault();
+                openDropdown();
+            }
+        });
+
+        // 포커스 아웃 (blur/focusout) 이벤트 -> 읽기 모드로 전환
+        container.addEventListener("focusout", (e) => {
+            if (!container.contains(e.relatedTarget)) {
+                closeDropdown();
             }
         });
 
