@@ -257,6 +257,39 @@
             color: var(--primary-color);
         }
 
+        /* Search Box in Dropdown */
+        .dropdown-search-box {
+            padding: 4px 4px 8px 4px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 6px;
+        }
+
+        .dropdown-search-input {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            outline: none;
+            color: var(--text-main);
+            background-color: #f8fafc;
+            transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+        }
+
+        .dropdown-search-input:focus {
+            background-color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        mark.highlight {
+            background-color: #fef08a;
+            color: #854d0e;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: bold;
+        }
+
         /* Action Buttons & Status */
         .actions {
             margin-top: 20px;
@@ -316,7 +349,7 @@
             WebSquare GridView Static Demo 
             <span class="badge">Static HTML/JS</span>
         </h1>
-        <p>동적 멀티라인 CheckComboBox & 체크 항목 최상단 자동 정렬 시뮬레이션</p>
+        <p>동적 멀티라인 CheckComboBox & 검색 기능 & 체크 항목 최상단 자동 정렬 시뮬레이션</p>
     </div>
 
     <div class="grid-table-container">
@@ -389,7 +422,7 @@
     /**
      * 전체 그리드 렌더링
      */
-    function renderGrid() {
+    function renderGrid(activeRowIndex = null, searchQuery = "") {
         const tbody = document.getElementById("gridBody");
         tbody.innerHTML = "";
 
@@ -409,7 +442,9 @@
             // 작업대상 셀 (Custom CheckComboBox)
             const tdTarget = document.createElement("td");
             tdTarget.className = "col-target";
-            tdTarget.appendChild(createCheckComboBox(index, row.workType, row.workTarget));
+            const isTargetActive = (index === activeRowIndex);
+            const queryForThisRow = isTargetActive ? searchQuery : "";
+            tdTarget.appendChild(createCheckComboBox(index, row.workType, row.workTarget, queryForThisRow));
 
             // 시작시간 셀
             const tdStartTime = document.createElement("td");
@@ -428,6 +463,17 @@
             tr.appendChild(tdEndTime);
             tbody.appendChild(tr);
         });
+
+        if (activeRowIndex !== null) {
+            const targetContainer = document.querySelectorAll(".checkcombobox-container")[activeRowIndex];
+            if (targetContainer) {
+                targetContainer.classList.add("active");
+                const searchInp = targetContainer.querySelector(".dropdown-search-input");
+                if (searchInp) {
+                    searchInp.focus();
+                }
+            }
+        }
     }
 
     /**
@@ -465,9 +511,9 @@
     }
 
     /**
-     * Custom CheckComboBox 생성 (체크 항목 최상단 정렬 및 멀티라인 구현)
+     * Custom CheckComboBox 생성 (검색 기능, 체크 항목 최상단 정렬 및 멀티라인 구현)
      */
-    function createCheckComboBox(rowIndex, workType, workTargetStr) {
+    function createCheckComboBox(rowIndex, workType, workTargetStr, currentSearchQuery = "") {
         const container = document.createElement("div");
         container.className = "checkcombobox-container";
 
@@ -507,7 +553,7 @@
         display.appendChild(textSpan);
         display.appendChild(icon);
 
-        // 3. Dropdown Menu (체크박스 목록)
+        // 3. Dropdown Menu (검색창 + 체크박스 목록)
         const dropdown = document.createElement("div");
         dropdown.className = "checkcombobox-dropdown";
 
@@ -519,18 +565,51 @@
             emptyNotice.innerText = "선택 가능한 항목이 없습니다.";
             dropdown.appendChild(emptyNotice);
         } else {
+            // 검색 입력 영역
+            const searchContainer = document.createElement("div");
+            searchContainer.className = "dropdown-search-box";
+            
+            const searchInput = document.createElement("input");
+            searchInput.type = "text";
+            searchInput.className = "dropdown-search-input";
+            searchInput.placeholder = "🔍 검색어 입력 (코드/명칭)...";
+            searchInput.value = currentSearchQuery;
+
+            searchContainer.appendChild(searchInput);
+            dropdown.appendChild(searchContainer);
+
+            // 이벤트 전파 방지
+            searchContainer.addEventListener("click", (e) => e.stopPropagation());
+            searchInput.addEventListener("click", (e) => e.stopPropagation());
+            searchInput.addEventListener("keydown", (e) => e.stopPropagation());
+
+            const itemListContainer = document.createElement("div");
+            itemListContainer.className = "dropdown-item-list";
+
+            const noResultNotice = document.createElement("div");
+            noResultNotice.className = "no-search-result";
+            noResultNotice.style.padding = "8px";
+            noResultNotice.style.fontSize = "0.8rem";
+            noResultNotice.style.color = "#94a3b8";
+            noResultNotice.style.textAlign = "center";
+            noResultNotice.style.display = "none";
+            noResultNotice.innerText = "검색 결과가 없습니다.";
+
             sortedMaster.forEach(item => {
                 const isChecked = selectedSet.has(item.id);
 
                 const itemDiv = document.createElement("label");
                 itemDiv.className = `dropdown-item ${isChecked ? "checked" : ""}`;
+                itemDiv.setAttribute("data-search", `${item.id} ${item.name}`.toLowerCase());
 
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
                 checkbox.value = item.id;
                 checkbox.checked = isChecked;
 
-                const labelText = document.createTextNode(`${item.id} (${item.name})`);
+                const labelText = document.createElement("span");
+                labelText.className = "item-label-text";
+                labelText.innerText = `${item.id} (${item.name})`;
 
                 checkbox.addEventListener("change", (e) => {
                     e.stopPropagation();
@@ -544,19 +623,61 @@
                     const newTargetStr = Array.from(selectedSet).join(",");
                     gridData[rowIndex].workTarget = newTargetStr;
 
-                    // 상태 재정렬 렌더링
-                    renderGrid();
-                    // 드롭다운 열림 상태 유지
-                    setTimeout(() => {
-                        const newContainer = document.querySelectorAll(".checkcombobox-container")[rowIndex];
-                        if (newContainer) newContainer.classList.add("active");
-                    }, 0);
+                    // 검색 필터 상태 유지하며 재정렬 렌더링
+                    const activeQuery = searchInput.value;
+                    renderGrid(rowIndex, activeQuery);
                 });
 
                 itemDiv.appendChild(checkbox);
                 itemDiv.appendChild(labelText);
-                dropdown.appendChild(itemDiv);
+                itemListContainer.appendChild(itemDiv);
             });
+
+            dropdown.appendChild(itemListContainer);
+            dropdown.appendChild(noResultNotice);
+
+            // 검색 필터링 & 키워드 하이라이팅
+            const filterItems = (query) => {
+                const trimmed = query.trim().toLowerCase();
+                let visibleCount = 0;
+                const items = itemListContainer.querySelectorAll(".dropdown-item");
+
+                items.forEach((itemEl, idx) => {
+                    const searchData = itemEl.getAttribute("data-search");
+                    const itemObj = sortedMaster[idx];
+                    const fullText = `${itemObj.id} (${itemObj.name})`;
+                    const labelTextEl = itemEl.querySelector(".item-label-text");
+
+                    if (!trimmed || searchData.includes(trimmed)) {
+                        itemEl.style.display = "flex";
+                        visibleCount++;
+
+                        if (trimmed && labelTextEl) {
+                            const regex = new RegExp(`(${trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, "gi");
+                            labelTextEl.innerHTML = fullText.replace(regex, `<mark class="highlight">$1</mark>`);
+                        } else if (labelTextEl) {
+                            labelTextEl.innerText = fullText;
+                        }
+                    } else {
+                        itemEl.style.display = "none";
+                    }
+                });
+
+                if (visibleCount === 0 && trimmed !== "") {
+                    noResultNotice.style.display = "block";
+                } else {
+                    noResultNotice.style.display = "none";
+                }
+            };
+
+            searchInput.addEventListener("input", (e) => {
+                filterItems(e.target.value);
+            });
+
+            // 초기 검색어가 있을 경우 자동 필터링
+            if (currentSearchQuery) {
+                setTimeout(() => filterItems(currentSearchQuery), 0);
+            }
         }
 
         // 토글 동작
@@ -566,6 +687,11 @@
             document.querySelectorAll(".checkcombobox-container").forEach(el => el.classList.remove("active"));
             if (!isActive && workType) {
                 container.classList.add("active");
+                // 검색 입력창 자동 포커스
+                const searchInp = container.querySelector(".dropdown-search-input");
+                if (searchInp) {
+                    setTimeout(() => searchInp.focus(), 50);
+                }
             }
         });
 

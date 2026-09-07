@@ -214,6 +214,7 @@
                         </w2:choices>
                     </w2:column>
                     <w2:column id="workTarget" blockSelect="false" width="350" inputType="checkcombobox"
+                        useItemFilter="true" search="contain" useKeywordHighlight="true"
                         customFormatter="scwin.fn_workTargetFormatter" class="multiline_cell">
                         <w2:choices></w2:choices>
                     </w2:column>
