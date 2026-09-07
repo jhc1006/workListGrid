@@ -56,20 +56,16 @@
             /**
              * 상위 작업구분별 작업대상 마스터 코드 데이터
              */
-            scwin.targetCodeMaster = {
-                "EQ": [
-                    { id: "EQ_A01", name: "압출 성형기 1호" },
-                    { id: "EQ_B01", name: "고속 정밀 냉각기" },
-                    { id: "EQ_C01", name: "자동 포장기 3호" },
-                    { id: "EQ_D01", name: "원료 배합기 2호" }
-                ],
-                "MAT": [
-                    { id: "IN_NORMAL", name: "정상입고" },
-                    { id: "IN_URGENT", name: "긴급입고" },
-                    { id: "OUT_NORMAL", name: "정상출고" },
-                    { id: "OUT_DISCARD", name: "폐기출고" }
-                ]
-            };
+            scwin.targetCodeMaster = [
+                { workType: "EQ", id: "EQ_A01", name: "압출 성형기 1호" },
+                { workType: "EQ", id: "EQ_B01", name: "고속 정밀 냉각기" },
+                { workType: "EQ", id: "EQ_C01", name: "자동 포장기 3호" },
+                { workType: "EQ", id: "EQ_D01", name: "원료 배합기 2호" },
+                { workType: "MAT", id: "IN_NORMAL", name: "정상입고" },
+                { workType: "MAT", id: "IN_URGENT", name: "긴급입고" },
+                { workType: "MAT", id: "OUT_NORMAL", name: "정상출고" },
+                { workType: "MAT", id: "OUT_DISCARD", name: "폐기출고" }
+            ];
 
             scwin.onpageload = function() {
                 // 테스트용 초기 샘플 데이터 세팅
@@ -121,7 +117,9 @@
              */
             scwin.refreshTargetItemList = function(rowIndex, workType, selectedValuesStr) {
                 var targetColIndex = grd_workList.getColumnIndex("workTarget");
-                var masterList = scwin.targetCodeMaster[workType] || [];
+                var masterList = (scwin.targetCodeMaster || []).filter(function(item) {
+                    return item.workType === workType;
+                });
 
                 if (masterList.length === 0) {
                     grd_workList.setCellItemList(rowIndex, targetColIndex, []);
@@ -163,7 +161,9 @@
             scwin.fn_workTargetFormatter = function(value, formattedValue, rowIndex, colIndex) {
                 if (!value) return "";
                 var workType = dlt_grid.getCellData(rowIndex, "workType");
-                var masterList = scwin.targetCodeMaster[workType] || [];
+                var masterList = (scwin.targetCodeMaster || []).filter(function(item) {
+                    return item.workType === workType;
+                });
                 var masterMap = {};
                 for (var i = 0; i < masterList.length; i++) {
                     masterMap[masterList[i].id] = masterList[i].name;
