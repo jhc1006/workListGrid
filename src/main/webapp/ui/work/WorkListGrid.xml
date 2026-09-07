@@ -441,6 +441,7 @@
 
         <w2:gridView id="grd_workList" dataList="data:dlt_grid" style="width: 100%; height: 400px;"
             rowNumVisible="true" rowNumHeaderValue="No" autoFit="allColumn"
+            editModeEvent="onclick" focusMode="cell"
             ev:onviewchange="scwin.grd_workList_onviewchange">
             <w2:header id="header1" style="">
                 <w2:row id="row1" style="">
