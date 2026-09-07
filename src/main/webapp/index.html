@@ -298,6 +298,109 @@
             align-items: center;
         }
 
+        /* Toolbar & Modal Styles */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 14px 18px;
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .toolbar-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .toolbar-date-input {
+            padding: 7px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+            color: var(--text-main);
+            background: #fff;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            width: 720px;
+            max-width: 92%;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 14px 20px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .import-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .import-table th, .import-table td {
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        .import-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        /* Action Buttons & Status */
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .btn {
             padding: 8px 16px;
             font-size: 0.875rem;
@@ -349,7 +452,14 @@
             WebSquare GridView Static Demo 
             <span class="badge">Static HTML/JS</span>
         </h1>
-        <p>동적 멀티라인 CheckComboBox & 검색 기능 & 체크 항목 최상단 자동 정렬 시뮬레이션</p>
+        <p>동적 멀티라인 CheckComboBox & 검색 기능 & 특정일 작업 불러오기 시뮬레이션</p>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <span class="toolbar-title">📅 특정일 작업내용 불러오기:</span>
+        <input type="date" id="searchDateInput" class="toolbar-date-input" value="2026-09-07" />
+        <button type="button" class="btn btn-primary" onclick="openImportModal()">특정일 작업 조회 및 선택</button>
     </div>
 
     <div class="grid-table-container">
@@ -377,6 +487,36 @@
     <div class="result-box" id="resultBox">// 버튼을 누르면 JSON 데이터가 여기에 출력됩니다.</div>
 </div>
 
+<!-- Modal Popup -->
+<div id="importModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>특정일 작업내용 선택 <span id="modalTitleDate" style="color: #2563eb; font-size: 0.95rem;"></span></h3>
+            <button type="button" onclick="closeImportModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer;">✕</button>
+        </div>
+        <div class="modal-body">
+            <table class="import-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">선택</th>
+                        <th style="width: 100px;">작업구분</th>
+                        <th>작업대상</th>
+                        <th style="width: 130px;">작업시간</th>
+                        <th style="width: 160px;">비고</th>
+                    </tr>
+                </thead>
+                <tbody id="importModalTableBody">
+                    <!-- Dynamic Rows -->
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="closeImportModal()" class="btn btn-secondary">취소</button>
+            <button type="button" onclick="applyImportedWork()" class="btn btn-primary">선택 항목 그리드로 불러오기</button>
+        </div>
+    </div>
+</div>
+
 <script>
     /**
      * 상위 구분별 코드 마스터 데이터
@@ -391,6 +531,112 @@
         { workType: "MAT", id: "OUT_NORMAL", name: "정상출고" },
         { workType: "MAT", id: "OUT_DISCARD", name: "폐기출고" }
     ];
+
+    /**
+     * 특정일자별 샘플 작업내용 데이터 (서버 DB 조회 결과 대체용 데이터)
+     */
+    const workHistoryData = {
+        "2026-09-07": [
+            { "workType": "EQ", "workTarget": "EQ_A01,EQ_D01", "startTime": "08:00", "endTime": "11:30", "remark": "압출 1호기 점검 및 원료 배합" },
+            { "workType": "MAT", "workTarget": "IN_URGENT", "startTime": "11:30", "endTime": "13:00", "remark": "원자재 긴급 입고" },
+            { "workType": "EQ", "workTarget": "EQ_C01", "startTime": "14:00", "endTime": "17:00", "remark": "자동 포장기 3호 라인 교체" }
+        ],
+        "2026-09-06": [
+            { "workType": "EQ", "workTarget": "EQ_B01", "startTime": "09:00", "endTime": "12:00", "remark": "고속 정밀 냉각기 정기 점검" },
+            { "workType": "MAT", "workTarget": "OUT_NORMAL", "startTime": "13:30", "endTime": "16:00", "remark": "완제품 정상 출고" }
+        ]
+    };
+
+    /**
+     * 특정일 작업내용 선택 모달 팝업 열기
+     */
+    function openImportModal() {
+        const dateInput = document.getElementById("searchDateInput");
+        const searchDate = dateInput ? dateInput.value : "2026-09-07";
+        
+        const modal = document.getElementById("importModal");
+        const modalTitleDate = document.getElementById("modalTitleDate");
+        const modalTableBody = document.getElementById("importModalTableBody");
+
+        if (!modal || !modalTableBody) return;
+
+        modalTitleDate.innerText = `(${searchDate})`;
+        modalTableBody.innerHTML = "";
+
+        const list = workHistoryData[searchDate] || workHistoryData["2026-09-07"];
+
+        if (!list || list.length === 0) {
+            modalTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding: 20px;">해당 일자에 조회된 작업내용이 없습니다.</td></tr>';
+        } else {
+            list.forEach((item, i) => {
+                const tr = document.createElement("tr");
+                const targetColFormatted = formatTargetText(item.workType, item.workTarget);
+
+                tr.innerHTML = `<td><input type="checkbox" class="import-chk" data-index="${i}" checked /></td>`
+                    + `<td>${item.workType === 'EQ' ? '설비(EQ)' : '자재(MAT)'}</td>`
+                    + `<td><div style="white-space:pre-wrap;">${targetColFormatted}</div></td>`
+                    + `<td>${item.startTime} ~ ${item.endTime}</td>`
+                    + `<td>${item.remark || '-'}</td>`;
+
+                modalTableBody.appendChild(tr);
+            });
+        }
+
+        modal.style.display = "flex";
+    }
+
+    /**
+     * 작업대상 코드 포맷터 헬퍼
+     */
+    function formatTargetText(workType, workTargetStr) {
+        if (!workTargetStr) return "";
+        const masterList = (targetCodeMaster || []).filter(item => item.workType === workType);
+        const masterMap = {};
+        masterList.forEach(m => masterMap[m.id] = m.name);
+
+        return workTargetStr.split(",")
+            .map(val => val.trim())
+            .filter(val => val)
+            .map(val => `${val} (${masterMap[val] || val})`)
+            .join("\n");
+    }
+
+    /**
+     * 모달 닫기
+     */
+    function closeImportModal() {
+        const modal = document.getElementById("importModal");
+        if (modal) modal.style.display = "none";
+    }
+
+    /**
+     * 선택한 특정일 작업내용 그리드에 불러오기
+     */
+    function applyImportedWork() {
+        const titleDateText = document.getElementById("modalTitleDate").innerText;
+        const searchDate = titleDateText.replace(/[()]/g, "");
+        const list = workHistoryData[searchDate] || workHistoryData["2026-09-07"];
+        const checkboxes = document.querySelectorAll(".import-chk:checked");
+
+        if (checkboxes.length === 0) {
+            alert("불러올 작업 항목을 선택해주세요.");
+            return;
+        }
+
+        checkboxes.forEach(chk => {
+            const idx = parseInt(chk.getAttribute("data-index"), 10);
+            const item = list[idx];
+            gridData.push({
+                workType: item.workType,
+                workTarget: item.workTarget,
+                startTime: item.startTime,
+                endTime: item.endTime
+            });
+        });
+
+        renderGrid();
+        closeImportModal();
+    }
 
     /**
      * 그리드 데이터 (DataList 역할)

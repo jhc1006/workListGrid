@@ -50,6 +50,97 @@
                 line-height: 1.4 !important;
                 padding: 6px 4px !important;
             }
+
+            /* 상단 툴바 스타일 */
+            .toolbar {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 16px;
+                padding: 14px 18px;
+                background-color: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+            }
+            .toolbar-title {
+                font-weight: 600;
+                font-size: 0.95rem;
+                color: #1e293b;
+            }
+            .btn-import {
+                background-color: #2563eb;
+                color: #ffffff;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 0.85rem;
+                border: none;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .btn-import:hover {
+                background-color: #1d4ed8;
+            }
+
+            /* 모달 팝업 스타일 */
+            .modal-overlay {
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(15, 23, 42, 0.5);
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+            .modal-content {
+                background: #ffffff;
+                width: 720px;
+                max-width: 92%;
+                border-radius: 12px;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }
+            .modal-header {
+                padding: 16px 20px;
+                background: #f1f5f9;
+                border-bottom: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .modal-header h3 {
+                font-size: 1.1rem;
+                color: #0f172a;
+                margin: 0;
+            }
+            .modal-body {
+                padding: 20px;
+                max-height: 350px;
+                overflow-y: auto;
+            }
+            .modal-footer {
+                padding: 14px 20px;
+                background: #f8fafc;
+                border-top: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            .import-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.85rem;
+            }
+            .import-table th, .import-table td {
+                padding: 10px 12px;
+                border: 1px solid #e2e8f0;
+                text-align: left;
+            }
+            .import-table th {
+                background: #f8fafc;
+                font-weight: 600;
+                color: #334155;
+            }
         ]]></style>
 
         <script type="javascript" lazy="false"><![CDATA[
@@ -67,6 +158,21 @@
                 { workType: "MAT", id: "OUT_DISCARD", name: "폐기출고" }
             ];
 
+            /**
+             * 특정일자별 샘플 작업내용 데이터 (서버 DB 조회 결과 대체용 데이터)
+             */
+            scwin.workHistoryData = {
+                "2026-09-07": [
+                    { "workType": "EQ", "workTarget": "EQ_A01,EQ_D01", "startTime": "08:00", "endTime": "11:30", "remark": "압출 1호기 점검 및 원료 배합" },
+                    { "workType": "MAT", "workTarget": "IN_URGENT", "startTime": "11:30", "endTime": "13:00", "remark": "원자재 긴급 입고" },
+                    { "workType": "EQ", "workTarget": "EQ_C01", "startTime": "14:00", "endTime": "17:00", "remark": "자동 포장기 3호 라인 교체" }
+                ],
+                "2026-09-06": [
+                    { "workType": "EQ", "workTarget": "EQ_B01", "startTime": "09:00", "endTime": "12:00", "remark": "고속 정밀 냉각기 정기 점검" },
+                    { "workType": "MAT", "workTarget": "OUT_NORMAL", "startTime": "13:30", "endTime": "16:00", "remark": "완제품 정상 출고" }
+                ]
+            };
+
             scwin.onpageload = function() {
                 // 테스트용 초기 샘플 데이터 세팅
                 var sampleData = [
@@ -76,6 +182,115 @@
                 ];
                 dlt_grid.setJSON(sampleData);
                 scwin.fn_initGridRender();
+            };
+
+            /**
+             * 특정일 작업 불러오기 버튼 클릭 이벤트
+             */
+            scwin.btn_importWork_onclick = function() {
+                var searchDate = document.getElementById("searchDateInput") ? document.getElementById("searchDateInput").value : "2026-09-07";
+                if (!searchDate) {
+                    searchDate = "2026-09-07";
+                }
+                scwin.fn_openImportModal(searchDate);
+            };
+
+            /**
+             * 특정일 작업내용 선택 모달 팝업 열기
+             */
+            scwin.fn_openImportModal = function(searchDate) {
+                var modal = document.getElementById("importModal");
+                var modalTitleDate = document.getElementById("modalTitleDate");
+                var modalTableBody = document.getElementById("importModalTableBody");
+
+                if (!modal || !modalTableBody) return;
+
+                modalTitleDate.innerText = "(" + searchDate + ")";
+                modalTableBody.innerHTML = "";
+
+                var list = scwin.workHistoryData[searchDate] || scwin.workHistoryData["2026-09-07"];
+
+                if (!list || list.length === 0) {
+                    modalTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding: 20px;">해당 일자에 조회된 작업내용이 없습니다.</td></tr>';
+                } else {
+                    for (var i = 0; i < list.length; i++) {
+                        var item = list[i];
+                        var tr = document.createElement("tr");
+
+                        var targetColFormatted = scwin.fn_formatTargetText(item.workType, item.workTarget);
+
+                        tr.innerHTML = '<td><input type="checkbox" class="import-chk" data-index="' + i + '" checked /></td>'
+                            + '<td>' + (item.workType === 'EQ' ? '설비(EQ)' : '자재(MAT)') + '</td>'
+                            + '<td><div style="white-space:pre-wrap;">' + targetColFormatted + '</div></td>'
+                            + '<td>' + item.startTime + ' ~ ' + item.endTime + '</td>'
+                            + '<td>' + (item.remark || '-') + '</td>';
+
+                        modalTableBody.appendChild(tr);
+                    }
+                }
+
+                modal.style.display = "flex";
+            };
+
+            /**
+             * 작업대상 코드에 따른 label 포맷터 헬퍼
+             */
+            scwin.fn_formatTargetText = function(workType, workTargetStr) {
+                if (!workTargetStr) return "";
+                var masterList = (scwin.targetCodeMaster || []).filter(function(item) {
+                    return item.workType === workType;
+                });
+                var masterMap = {};
+                for (var i = 0; i < masterList.length; i++) {
+                    masterMap[masterList[i].id] = masterList[i].name;
+                }
+                var valArr = workTargetStr.split(",");
+                var resultArr = [];
+                for (var j = 0; j < valArr.length; j++) {
+                    var val = valArr[j].trim();
+                    if (val) {
+                        resultArr.push(val + " (" + (masterMap[val] || val) + ")");
+                    }
+                }
+                return resultArr.join("\n");
+            };
+
+            /**
+             * 모달 닫기
+             */
+            scwin.fn_closeImportModal = function() {
+                var modal = document.getElementById("importModal");
+                if (modal) modal.style.display = "none";
+            };
+
+            /**
+             * 선택한 특정일 작업내용 그리드에 적용(불러오기)
+             */
+            scwin.fn_applyImportedWork = function() {
+                var searchDate = document.getElementById("modalTitleDate").innerText.replace(/[()]/g, "");
+                var list = scwin.workHistoryData[searchDate] || scwin.workHistoryData["2026-09-07"];
+                var checkboxes = document.querySelectorAll(".import-chk:checked");
+
+                if (checkboxes.length === 0) {
+                    alert("불러올 작업 항목을 선택해주세요.");
+                    return;
+                }
+
+                for (var i = 0; i < checkboxes.length; i++) {
+                    var idx = parseInt(checkboxes[i].getAttribute("data-index"), 10);
+                    var item = list[idx];
+
+                    // DataList에 새로운 행 추가
+                    var newRowIndex = dlt_grid.insertRow();
+                    dlt_grid.setCellData(newRowIndex, "workType", item.workType);
+                    dlt_grid.setCellData(newRowIndex, "workTarget", item.workTarget);
+                    dlt_grid.setCellData(newRowIndex, "startTime", item.startTime);
+                    dlt_grid.setCellData(newRowIndex, "endTime", item.endTime);
+                }
+
+                // 각 행별 checkcombobox 셀 아이템 목록 동적 초기화 및 정렬 적용
+                scwin.fn_initGridRender();
+                scwin.fn_closeImportModal();
             };
 
             /**
@@ -192,6 +407,13 @@
         ]]></script>
     </head>
     <body>
+        <!-- 상단 특정일 조회 및 불러오기 툴바 -->
+        <div class="toolbar">
+            <span class="toolbar-title">📅 특정일 작업내용 불러오기:</span>
+            <input type="date" id="searchDateInput" value="2026-09-07" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem;" />
+            <button type="button" class="btn-import" onclick="scwin.btn_importWork_onclick()">특정일 작업 조회 및 선택</button>
+        </div>
+
         <w2:gridView id="grd_workList" dataList="data:dlt_grid" style="width: 100%; height: 400px;"
             rowNumVisible="true" rowNumHeaderValue="No" autoFit="allColumn"
             ev:onviewchange="scwin.grd_workList_onviewchange">
@@ -223,5 +445,35 @@
                 </w2:row>
             </w2:gBody>
         </w2:gridView>
+
+        <!-- 특정일 작업내용 선택 모달 팝업 -->
+        <div id="importModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>특정일 작업내용 선택 <span id="modalTitleDate" style="color: #2563eb; font-size: 0.95rem;"></span></h3>
+                    <button type="button" onclick="scwin.fn_closeImportModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer;">✕</button>
+                </div>
+                <div class="modal-body">
+                    <table class="import-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">선택</th>
+                                <th style="width: 100px;">작업구분</th>
+                                <th>작업대상</th>
+                                <th style="width: 130px;">작업시간</th>
+                                <th style="width: 160px;">비고</th>
+                            </tr>
+                        </thead>
+                        <tbody id="importModalTableBody">
+                            <!-- 동적 렌더링 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="scwin.fn_closeImportModal()" style="padding: 8px 16px; border: 1px solid #cbd5e1; background:#fff; border-radius:6px; cursor:pointer;">취소</button>
+                    <button type="button" onclick="scwin.fn_applyImportedWork()" class="btn-import">선택 항목 그리드로 불러오기</button>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
