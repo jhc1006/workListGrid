@@ -196,14 +196,18 @@
                 // WebSquare 4 / 5 호환성을 위한 방어적 폴백 헬퍼 등록
                 if (window.grd_workList && typeof grd_workList.setCellItemList !== "function") {
                     grd_workList.setCellItemList = function(rowIndex, colIndex, itemList) {
+                        var itemArr = Array.isArray(itemList) ? itemList : [];
+                        if (typeof itemList === "string") {
+                            try { itemArr = JSON.parse(itemList); } catch(e) { itemArr = []; }
+                        }
+                        var itemStr = (typeof itemList === "string") ? itemList : JSON.stringify(itemArr);
+
                         if (typeof this.setCellItem === "function") {
-                            this.setCellItem(rowIndex, colIndex, itemList);
+                            try { this.setCellItem(rowIndex, colIndex, itemArr); } catch(e) { this.setCellItem(rowIndex, colIndex, itemStr); }
                         } else if (typeof this.setColumnNodeSet === "function") {
-                            // setColumnNodeSet은 JS 배열이 아닌 "data:dlt_targetCodeMaster" 같은 XPath 문자열 필요
-                            var nodeSetStr = (typeof itemList === "string") ? itemList : "data:dlt_targetCodeMaster";
-                            this.setColumnNodeSet(colIndex, nodeSetStr, "name", "id");
+                            try { this.setColumnNodeSet(colIndex, "data:dlt_targetCodeMaster", "name", "id"); } catch(e) {}
                         } else if (typeof this.setCellNodeSet === "function") {
-                            try { this.setCellNodeSet(rowIndex, colIndex, itemList); } catch(e) {}
+                            try { this.setCellNodeSet(rowIndex, colIndex, itemArr); } catch(e) {}
                         }
                     };
                 }
@@ -453,26 +457,36 @@
             };
 
             /**
-             * GridView setCellItemList 방어적 헬퍼 (WebSquare 4/5 호환)
+             * GridView setCellItemList 방어적 헬퍼 (WebSquare 4/5 호환 - Array & String 타입 자동 처리)
              */
             scwin.fn_setCellItemList = function(rowIndex, colIndex, itemList) {
+                var itemArr = Array.isArray(itemList) ? itemList : [];
+                if (typeof itemList === "string") {
+                    try { itemArr = JSON.parse(itemList); } catch(e) { itemArr = []; }
+                }
+                var itemStr = (typeof itemList === "string") ? itemList : JSON.stringify(itemArr);
+
                 if (typeof grd_workList.setCellItemList === "function") {
-                    grd_workList.setCellItemList(rowIndex, colIndex, itemList);
-                } else if (typeof grd_workList.setCellItem === "function") {
-                    // WebSquare 4 호환 셀 아이템 세팅 API
-                    grd_workList.setCellItem(rowIndex, colIndex, itemList);
-                } else if (typeof grd_workList.setColumnNodeSet === "function") {
-                    // setColumnNodeSet은 JS Array 객체가 아닌 DataList ID 경로 문자열("data:dlt_targetCodeMaster")이 들어와야 함
-                    var nodeSetStr = (typeof itemList === "string") ? itemList : "data:dlt_targetCodeMaster";
                     try {
-                        grd_workList.setColumnNodeSet(colIndex, nodeSetStr, "name", "id");
+                        grd_workList.setCellItemList(rowIndex, colIndex, itemArr);
+                    } catch(e) {
+                        grd_workList.setCellItemList(rowIndex, colIndex, itemStr);
+                    }
+                } else if (typeof grd_workList.setCellItem === "function") {
+                    try {
+                        grd_workList.setCellItem(rowIndex, colIndex, itemArr);
+                    } catch(e) {
+                        grd_workList.setCellItem(rowIndex, colIndex, itemStr);
+                    }
+                } else if (typeof grd_workList.setColumnNodeSet === "function") {
+                    try {
+                        grd_workList.setColumnNodeSet(colIndex, "data:dlt_targetCodeMaster", "name", "id");
                     } catch(e) {
                         console.warn("setColumnNodeSet 실행 오류 예외 처리:", e);
                     }
                 } else if (typeof grd_workList.setCellNodeSet === "function") {
-                    // WebSquare 5 셀 NodeSet 세팅 API
                     try {
-                        grd_workList.setCellNodeSet(rowIndex, colIndex, itemList);
+                        grd_workList.setCellNodeSet(rowIndex, colIndex, itemArr);
                     } catch(e) {
                         console.warn("setCellNodeSet 실행 오류 예외 처리:", e);
                     }
