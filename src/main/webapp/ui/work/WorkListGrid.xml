@@ -417,7 +417,15 @@
                 // EQ, MAT인 경우 -> checkcombobox 입력 모드로 전환
                 grd_workList.setCellInputType(rowIndex, targetColIndex, "checkcombobox");
 
-                var masterList = (scwin.targetCodeMaster || []).filter(function(item) {
+                // DataList(dlt_targetCodeMaster) 우선 조회 후 workType 조건으로 필터링
+                var sourceList = [];
+                if (window.dlt_targetCodeMaster && typeof dlt_targetCodeMaster.getRowCount === "function" && dlt_targetCodeMaster.getRowCount() > 0) {
+                    sourceList = dlt_targetCodeMaster.getAllJSON();
+                } else {
+                    sourceList = scwin.targetCodeMaster || [];
+                }
+
+                var masterList = sourceList.filter(function(item) {
                     return item.workType === workType;
                 });
 
