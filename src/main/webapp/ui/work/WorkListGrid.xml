@@ -179,6 +179,17 @@
             };
 
             scwin.onpageload = function() {
+                // 다른 프로젝트 이관 시 setCellItemList가 웹스퀘어 GridView에 없을 경우 방어적 폴백 헬퍼 등록
+                if (window.grd_workList && typeof grd_workList.setCellItemList !== "function") {
+                    grd_workList.setCellItemList = function(rowIndex, colIndex, itemList) {
+                        if (typeof this.setCellNodeSet === "function") {
+                            this.setCellNodeSet(rowIndex, colIndex, itemList);
+                        } else if (typeof this.setCellItem === "function") {
+                            this.setCellItem(rowIndex, colIndex, itemList);
+                        }
+                    };
+                }
+
                 // 테스트용 초기 샘플 데이터 세팅
                 var sampleData = [
                     { "workType": "EQ", "workTarget": "EQ_A01,EQ_C01", "startTime": "09:00", "endTime": "12:00" },
@@ -356,7 +367,7 @@
                 });
 
                 if (masterList.length === 0) {
-                    grd_workList.setCellItemList(rowIndex, targetColIndex, []);
+                    scwin.fn_setCellItemList(rowIndex, targetColIndex, []);
                     return;
                 }
 
@@ -386,7 +397,21 @@
                     });
                 }
 
-                grd_workList.setCellItemList(rowIndex, targetColIndex, itemList);
+                // 안전하게 셀 아이템 리스트 설정 (setCellItemList가 없을 경우 폴백)
+                scwin.fn_setCellItemList(rowIndex, targetColIndex, itemList);
+            };
+
+            /**
+             * GridView setCellItemList 방어적 헬퍼
+             */
+            scwin.fn_setCellItemList = function(rowIndex, colIndex, itemList) {
+                if (typeof grd_workList.setCellItemList === "function") {
+                    grd_workList.setCellItemList(rowIndex, colIndex, itemList);
+                } else if (typeof grd_workList.setCellNodeSet === "function") {
+                    grd_workList.setCellNodeSet(rowIndex, colIndex, itemList);
+                } else if (typeof grd_workList.setCellItem === "function") {
+                    grd_workList.setCellItem(rowIndex, colIndex, itemList);
+                }
             };
 
             /**
