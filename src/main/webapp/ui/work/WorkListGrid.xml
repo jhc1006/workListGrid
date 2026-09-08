@@ -457,26 +457,52 @@
             };
 
             /**
-             * GridView setCellItemList 방어적 헬퍼 (WebSquare 4/5 호환 - Array & String 타입 자동 처리)
+             * itemList 배열을 WebSquare 구버전용 XML NodeSet 문자열로 변환하는 헬퍼
+             */
+            scwin.fn_itemListToXML = function(itemList) {
+                var itemArr = Array.isArray(itemList) ? itemList : [];
+                var xmlArr = ["<vector>"];
+                for (var i = 0; i < itemArr.length; i++) {
+                    var item = itemArr[i];
+                    xmlArr.push("<item>");
+                    xmlArr.push("<label>" + (item.label || "") + "</label>");
+                    xmlArr.push("<value>" + (item.value || "") + "</value>");
+                    xmlArr.push("</item>");
+                }
+                xmlArr.push("</vector>");
+                return xmlArr.join("");
+            };
+
+            /**
+             * GridView setCellItemList 방어적 헬퍼 (WebSquare 3/4/5 호환 - Array, JSON String, XML String 다중 타입 자동 처리)
              */
             scwin.fn_setCellItemList = function(rowIndex, colIndex, itemList) {
                 var itemArr = Array.isArray(itemList) ? itemList : [];
-                if (typeof itemList === "string") {
+                if (typeof itemList === "string" && itemList.indexOf("<") !== 0) {
                     try { itemArr = JSON.parse(itemList); } catch(e) { itemArr = []; }
                 }
-                var itemStr = (typeof itemList === "string") ? itemList : JSON.stringify(itemArr);
+                var itemStr = JSON.stringify(itemArr);
+                var itemXml = (typeof itemList === "string" && itemList.indexOf("<") === 0) ? itemList : scwin.fn_itemListToXML(itemArr);
 
                 if (typeof grd_workList.setCellItemList === "function") {
                     try {
                         grd_workList.setCellItemList(rowIndex, colIndex, itemArr);
-                    } catch(e) {
-                        grd_workList.setCellItemList(rowIndex, colIndex, itemStr);
+                    } catch(e1) {
+                        try {
+                            grd_workList.setCellItemList(rowIndex, colIndex, itemXml);
+                        } catch(e2) {
+                            grd_workList.setCellItemList(rowIndex, colIndex, itemStr);
+                        }
                     }
                 } else if (typeof grd_workList.setCellItem === "function") {
                     try {
-                        grd_workList.setCellItem(rowIndex, colIndex, itemArr);
-                    } catch(e) {
-                        grd_workList.setCellItem(rowIndex, colIndex, itemStr);
+                        grd_workList.setCellItem(rowIndex, colIndex, itemXml);
+                    } catch(e1) {
+                        try {
+                            grd_workList.setCellItem(rowIndex, colIndex, itemArr);
+                        } catch(e2) {
+                            grd_workList.setCellItem(rowIndex, colIndex, itemStr);
+                        }
                     }
                 } else if (typeof grd_workList.setColumnNodeSet === "function") {
                     try {
@@ -486,9 +512,13 @@
                     }
                 } else if (typeof grd_workList.setCellNodeSet === "function") {
                     try {
-                        grd_workList.setCellNodeSet(rowIndex, colIndex, itemArr);
-                    } catch(e) {
-                        console.warn("setCellNodeSet 실행 오류 예외 처리:", e);
+                        grd_workList.setCellNodeSet(rowIndex, colIndex, itemXml);
+                    } catch(e1) {
+                        try {
+                            grd_workList.setCellNodeSet(rowIndex, colIndex, itemArr);
+                        } catch(e2) {
+                            console.warn("setCellNodeSet 실행 오류 예외 처리:", e2);
+                        }
                     }
                 }
             };
