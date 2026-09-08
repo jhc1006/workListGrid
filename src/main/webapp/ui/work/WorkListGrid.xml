@@ -514,9 +514,27 @@
                     }
                 } else if (typeof grd_workList.setColumnNodeSet === "function") {
                     try {
-                        grd_workList.setColumnNodeSet(colIndex, "data:dlt_targetCodeMaster", "name", "id");
+                        // itemList (Array)를 런타임에 동적 DataList로 변환하여 setColumnNodeSet에 전달
+                        var dynDataListId = "dlt_dyn_combo_" + colIndex;
+                        if (!window[dynDataListId] && typeof $w !== "undefined" && $w.data && typeof $w.data.create === "function") {
+                            $w.data.create({
+                                id: dynDataListId,
+                                type: "dataList",
+                                option: { baseNode: "list", repeatNode: "map" },
+                                columnInfo: [
+                                    { id: "label", name: "라벨", dataType: "text" },
+                                    { id: "value", name: "값", dataType: "text" }
+                                ]
+                            });
+                        }
+                        if (window[dynDataListId]) {
+                            window[dynDataListId].setJSON(itemArr);
+                            grd_workList.setColumnNodeSet(colIndex, "data:" + dynDataListId, "label", "value");
+                        } else {
+                            grd_workList.setColumnNodeSet(colIndex, "data:dlt_targetCodeMaster", "name", "id");
+                        }
                     } catch(e) {
-                        console.warn("setColumnNodeSet 실행 오류 예외 처리:", e);
+                        console.warn("setColumnNodeSet 동적 DataList 전달 예외 처리:", e);
                     }
                 } else if (typeof grd_workList.setCellNodeSet === "function") {
                     try {
