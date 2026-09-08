@@ -521,7 +521,7 @@
     /**
      * 상위 구분별 코드 마스터 데이터
      */
-    const targetCodeMaster = [
+    let targetCodeMaster = [
         { workType: "EQ", id: "EQ_A01", name: "압출 성형기 1호" },
         { workType: "EQ", id: "EQ_B01", name: "고속 정밀 냉각기" },
         { workType: "EQ", id: "EQ_C01", name: "자동 포장기 3호" },
@@ -531,6 +531,20 @@
         { workType: "MAT", id: "OUT_NORMAL", name: "정상출고" },
         { workType: "MAT", id: "OUT_DISCARD", name: "폐기출고" }
     ];
+
+    /**
+     * DB에서 가져온 JSON 데이터를 targetCodeMaster에 설정하는 함수
+     * @param {Array} jsonData
+     */
+    window.setTargetCodeMasterJSON = function(jsonData) {
+        if (!Array.isArray(jsonData)) return;
+        targetCodeMaster = jsonData;
+        // 행별 드롭다운 UI 동적 재구성
+        document.querySelectorAll('tr[data-row-id]').forEach(tr => {
+            const rowId = parseInt(tr.getAttribute('data-row-id'), 10);
+            updateTargetCellUI(rowId);
+        });
+    };
 
     /**
      * 특정일자별 샘플 작업내용 데이터 (서버 DB 조회 결과 대체용 데이터)
